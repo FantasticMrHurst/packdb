@@ -1,13 +1,14 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 import App from './App'
 
 describe('PackDB shell', () => {
-  it('renders the three primary workspace regions', () => {
+  beforeEach(() => localStorage.clear())
+  it('renders the three primary workspace regions', async () => {
     render(<App />)
     expect(
-      screen.getByRole('heading', { name: 'Gear Vault' }),
+      await screen.findByRole('heading', { name: 'Gear Vault' }),
     ).toBeInTheDocument()
     expect(
       screen.getByRole('heading', { name: 'Olympic Traverse' }),
@@ -20,7 +21,7 @@ describe('PackDB shell', () => {
   it('filters the seeded inventory', async () => {
     render(<App />)
     await userEvent.type(
-      screen.getByPlaceholderText('Search your gear...'),
+      await screen.findByPlaceholderText('Search your gear...'),
       'Sawyer',
     )
     expect(screen.getByText('Squeeze Filter')).toBeInTheDocument()
