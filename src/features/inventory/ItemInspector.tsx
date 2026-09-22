@@ -1,8 +1,20 @@
 import { Box, Ruler, Tag } from 'lucide-react'
-import type { GearItem } from '../../types/gear'
+import type { DisplayWeightUnit, GearItem } from '../../types/gear'
 import { formatWeight } from '../../lib/weight'
 
-export function ItemInspector({ item }: { item: GearItem }) {
+interface Props {
+  item: GearItem
+  categoryLabel: string
+  displayWeightUnit: DisplayWeightUnit
+  isInLoadout: boolean
+}
+
+export function ItemInspector({
+  item,
+  categoryLabel,
+  displayWeightUnit,
+  isInLoadout,
+}: Props) {
   return (
     <aside className="panel inspector" aria-labelledby="inspector-title">
       <div className="section-heading">
@@ -19,7 +31,7 @@ export function ItemInspector({ item }: { item: GearItem }) {
         <div className="visual-grid" />
       </div>
       <p className="category">
-        <Tag size={13} /> {item.category}
+        <Tag size={13} /> {categoryLabel}
       </p>
       <h3>{item.name}</h3>
       <p className="maker">{item.brand}</p>
@@ -29,13 +41,13 @@ export function ItemInspector({ item }: { item: GearItem }) {
           <dt>
             <Ruler size={15} /> Weight
           </dt>
-          <dd>{formatWeight(item.weightGrams)}</dd>
+          <dd>{formatWeight(item.weightGrams, displayWeightUnit)}</dd>
         </div>
         <div>
           <dt>
             <Box size={15} /> Status
           </dt>
-          <dd>{item.packed ? 'In Loadout' : 'In Vault'}</dd>
+          <dd>{isInLoadout ? 'In Loadout' : 'In Vault'}</dd>
         </div>
       </dl>
       <button className="secondary-action">Edit item details</button>

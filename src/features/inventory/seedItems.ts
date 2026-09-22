@@ -1,70 +1,97 @@
-import type { GearItem } from '../../types/gear'
+import {
+  CURRENT_SCHEMA_VERSION,
+  type GearItem,
+  type PersistedInventory,
+} from '../../types/gear'
 
 export const seedItems: GearItem[] = [
-  {
-    id: 'tent',
-    name: 'Copper Spur HV UL2',
-    brand: 'Big Agnes',
-    category: 'Shelter',
-    weightGrams: 1420,
-    description:
-      'Freestanding two-person shelter with a roomy interior and fast-pitch option.',
-    color: '#d8a94a',
-    packed: true,
-  },
-  {
-    id: 'quilt',
-    name: 'Revelation 20° Quilt',
-    brand: 'Enlightened Equipment',
-    category: 'Sleep',
-    weightGrams: 624,
-    description:
-      'Versatile down quilt rated for three-season nights and minimal packed volume.',
-    color: '#c8673f',
-    packed: true,
-  },
-  {
-    id: 'pad',
-    name: 'Tensor All-Season',
-    brand: 'NEMO',
-    category: 'Sleep',
-    weightGrams: 440,
-    description:
-      'Insulated sleeping pad balancing warmth, comfort, and trail-ready weight.',
-    color: '#769c70',
-    packed: false,
-  },
-  {
-    id: 'stove',
-    name: 'PocketRocket Deluxe',
-    brand: 'MSR',
-    category: 'Cooking',
-    weightGrams: 83,
-    description:
-      'Compact canister stove with pressure regulation and a built-in piezo igniter.',
-    color: '#bd4c3f',
-    packed: true,
-  },
-  {
-    id: 'filter',
-    name: 'Squeeze Filter',
-    brand: 'Sawyer',
-    category: 'Water',
-    weightGrams: 85,
-    description:
-      'Field-serviceable hollow-fiber water filter for bottles and gravity systems.',
-    color: '#4f8d9d',
-    packed: true,
-  },
-  {
-    id: 'lamp',
-    name: 'Actik Core 600',
-    brand: 'Petzl',
-    category: 'Tools',
-    weightGrams: 88,
-    description:
-      'Rechargeable headlamp with a broad mixed beam and red-light mode.',
-    color: '#c7b04b',
-    packed: false,
-  },
-]
+  [
+    'tent',
+    'Copper Spur HV UL2',
+    'Big Agnes',
+    'shelter',
+    1420,
+    '#d8a94a',
+    'Freestanding two-person shelter with a roomy interior and fast-pitch option.',
+  ],
+  [
+    'quilt',
+    'Revelation 20° Quilt',
+    'Enlightened Equipment',
+    'sleep',
+    624,
+    '#c8673f',
+    'Versatile down quilt rated for three-season nights and minimal packed volume.',
+  ],
+  [
+    'pad',
+    'Tensor All-Season',
+    'NEMO',
+    'sleep',
+    440,
+    '#769c70',
+    'Insulated sleeping pad balancing warmth, comfort, and trail-ready weight.',
+  ],
+  [
+    'stove',
+    'PocketRocket Deluxe',
+    'MSR',
+    'cooking',
+    83,
+    '#bd4c3f',
+    'Compact canister stove with pressure regulation and a built-in piezo igniter.',
+  ],
+  [
+    'filter',
+    'Squeeze Filter',
+    'Sawyer',
+    'water',
+    85,
+    '#4f8d9d',
+    'Field-serviceable hollow-fiber water filter for bottles and gravity systems.',
+  ],
+  [
+    'lamp',
+    'Actik Core 600',
+    'Petzl',
+    'tools',
+    88,
+    '#c7b04b',
+    'Rechargeable headlamp with a broad mixed beam and red-light mode.',
+  ],
+].map(([id, name, brand, categoryId, weightGrams, color, description]) => ({
+  id: id as string,
+  name: name as string,
+  brand: brand as string,
+  categoryId: categoryId as string,
+  weightGrams: weightGrams as number,
+  weightUnit: 'g',
+  color: color as string,
+  description: description as string,
+}))
+
+export const seedInventory: PersistedInventory = {
+  schemaVersion: CURRENT_SCHEMA_VERSION,
+  gearItems: seedItems,
+  categories: [
+    { id: 'shelter', label: 'Shelter' },
+    { id: 'sleep', label: 'Sleep' },
+    { id: 'cooking', label: 'Cooking' },
+    { id: 'water', label: 'Water' },
+    { id: 'tools', label: 'Tools' },
+  ],
+  loadouts: [
+    {
+      id: 'olympic-traverse',
+      name: 'Olympic Traverse',
+      entries: ['tent', 'quilt', 'stove', 'filter'].map((gearItemId) => ({
+        id: `olympic-traverse-${gearItemId}`,
+        gearItemId,
+        quantity: 1,
+        packed: true,
+        carryClassification: 'carried',
+      })),
+    },
+  ],
+  userSettings: { displayWeightUnit: 'kg', carryCapacityGrams: 3200 },
+}

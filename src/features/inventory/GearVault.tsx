@@ -1,5 +1,5 @@
 import { Check, Plus, Search, SlidersHorizontal } from 'lucide-react'
-import type { GearItem } from '../../types/gear'
+import type { DisplayWeightUnit, GearItem } from '../../types/gear'
 import { formatWeight } from '../../lib/weight'
 
 interface Props {
@@ -9,6 +9,9 @@ interface Props {
   onQueryChange: (query: string) => void
   onSelect: (id: string) => void
   onTogglePacked: (id: string) => void
+  packedItemIds: Set<string>
+  categoryLabels: Record<string, string>
+  displayWeightUnit: DisplayWeightUnit
 }
 
 export function GearVault({
@@ -18,6 +21,9 @@ export function GearVault({
   onQueryChange,
   onSelect,
   onTogglePacked,
+  packedItemIds,
+  categoryLabels,
+  displayWeightUnit,
 }: Props) {
   return (
     <section className="panel vault" aria-labelledby="vault-title">
@@ -63,19 +69,23 @@ export function GearVault({
               <span className="gear-card__copy">
                 <strong>{item.name}</strong>
                 <span>
-                  {item.brand} · {item.category}
+                  {item.brand} · {categoryLabels[item.categoryId]}
                 </span>
               </span>
               <span className="gear-weight">
-                {formatWeight(item.weightGrams)}
+                {formatWeight(item.weightGrams, displayWeightUnit)}
               </span>
             </button>
             <button
-              className={`pack-toggle ${item.packed ? 'is-packed' : ''}`}
+              className={`pack-toggle ${packedItemIds.has(item.id) ? 'is-packed' : ''}`}
               onClick={() => onTogglePacked(item.id)}
-              aria-label={`${item.packed ? 'Remove' : 'Add'} ${item.name} ${item.packed ? 'from' : 'to'} loadout`}
+              aria-label={`${packedItemIds.has(item.id) ? 'Remove' : 'Add'} ${item.name} ${packedItemIds.has(item.id) ? 'from' : 'to'} loadout`}
             >
-              {item.packed ? <Check size={16} /> : <Plus size={16} />}
+              {packedItemIds.has(item.id) ? (
+                <Check size={16} />
+              ) : (
+                <Plus size={16} />
+              )}
             </button>
           </article>
         ))}
