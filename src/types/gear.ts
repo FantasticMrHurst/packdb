@@ -27,11 +27,14 @@ export interface GearItem {
   /** Integer grams. Values are converted only when rendered. */
   weightGrams: number
   weightUnit: CanonicalWeightUnit
+  /** Unit chosen when the weight was entered; canonical storage remains grams. */
+  displayWeightUnit?: DisplayWeightUnit
   categoryId: CategoryId
   description?: string
   notes?: string
   tags?: string[]
   color: string
+  modifiedAt?: string
 }
 
 /** The trip-specific use of a reusable vault item. */

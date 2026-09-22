@@ -44,6 +44,9 @@ const validItem = (value: unknown): value is GearItem =>
   isFiniteNumber(value.weightGrams) &&
   value.weightGrams >= 0 &&
   value.weightUnit === 'g' &&
+  (!('displayWeightUnit' in value) ||
+    value.displayWeightUnit === undefined ||
+    ['g', 'kg', 'oz', 'lb'].includes(value.displayWeightUnit as string)) &&
   isString(value.categoryId) &&
   isString(value.color)
 
@@ -54,7 +57,9 @@ const validEntry = (value: unknown) =>
   Number.isInteger(value.quantity) &&
   (value.quantity as number) > 0 &&
   typeof value.packed === 'boolean' &&
-  ['carried', 'worn', 'consumable'].includes(value.carryClassification as string)
+  ['carried', 'worn', 'consumable'].includes(
+    value.carryClassification as string,
+  )
 
 const validLoadout = (value: unknown): value is Loadout =>
   isRecord(value) &&
@@ -146,7 +151,11 @@ export function mergeInventory(
     inventory: {
       schemaVersion: CURRENT_SCHEMA_VERSION,
       gearItems: mergeUnique('Item', current.gearItems, incoming.gearItems),
-      categories: mergeUnique('Category', current.categories, incoming.categories),
+      categories: mergeUnique(
+        'Category',
+        current.categories,
+        incoming.categories,
+      ),
       loadouts: mergeUnique('Loadout', current.loadouts, incoming.loadouts),
       userSettings: current.userSettings,
     },
