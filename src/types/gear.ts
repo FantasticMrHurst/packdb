@@ -55,7 +55,7 @@ export interface UserSettings {
   carryCapacityGrams: number
 }
 
-export const CURRENT_SCHEMA_VERSION = 1 as const
+export const CURRENT_SCHEMA_VERSION = 2 as const
 
 /** Versioned shape suitable for local or remote persistence. */
 export interface PersistedInventory {

@@ -1,113 +1,136 @@
-import { useMemo, useState } from 'react'
-import { Bell, ChevronDown, CircleUserRound, CloudSun } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Bell, ChevronDown, CircleUserRound, CloudSun, Download, Upload } from 'lucide-react'
 import { BrandMark } from './components/BrandMark'
 import { GearVault } from './features/inventory/GearVault'
 import { ItemInspector } from './features/inventory/ItemInspector'
 import { seedInventory } from './features/inventory/seedItems'
 import { ActiveLoadout } from './features/loadouts/ActiveLoadout'
-import type { LoadoutEntry } from './types/gear'
+import {
+  createLocalStorageAdapter,
+  deserializeInventory,
+  mergeInventory,
+  serializeInventory,
+} from './lib/storage/inventoryStorage'
+import type { PersistedInventory } from './types/gear'
+
+const storage = createLocalStorageAdapter()
+type SaveState = 'loading' | 'idle' | 'saving' | 'saved' | 'error'
 
 export default function App() {
-  const { gearItems: items, categories, userSettings } = seedInventory
-  const [entries, setEntries] = useState<LoadoutEntry[]>(
-    seedInventory.loadouts[0].entries,
-  )
-  const [selectedId, setSelectedId] = useState(items[0].id)
+  const [inventory, setInventory] = useState<PersistedInventory | null>(null)
+  const [saveState, setSaveState] = useState<SaveState>('loading')
+  const [importMode, setImportMode] = useState<'merge' | 'overwrite'>('merge')
+  const [importReport, setImportReport] = useState('')
+  const [selectedId, setSelectedId] = useState('')
   const [query, setQuery] = useState('')
-  const categoryLabels = useMemo(
-    () =>
-      Object.fromEntries(
-        categories.map((category) => [category.id, category.label]),
-      ),
-    [categories],
-  )
-  const itemsById = useMemo(
-    () => new Map(items.map((item) => [item.id, item])),
-    [items],
-  )
-  const packedItemIds = new Set(entries.map((entry) => entry.gearItemId))
-  const filteredItems = useMemo(
-    () =>
-      items.filter((item) =>
-        `${item.name} ${item.brand} ${categoryLabels[item.categoryId]}`
-          .toLowerCase()
-          .includes(query.toLowerCase()),
-      ),
-    [items, query, categoryLabels],
+  const dirty = useRef(false)
+
+  useEffect(() => {
+    let active = true
+    storage.load().then((stored) => {
+      if (!active) return
+      const next = stored ?? seedInventory
+      setInventory(next)
+      setSelectedId(next.gearItems[0]?.id ?? '')
+      setSaveState('idle')
+    }).catch(() => {
+      if (!active) return
+      setInventory(seedInventory)
+      setSelectedId(seedInventory.gearItems[0]?.id ?? '')
+      setSaveState('error')
+    })
+    return () => { active = false }
+  }, [])
+
+  useEffect(() => {
+    if (!inventory || !dirty.current) return
+    setSaveState('saving')
+    const timeout = window.setTimeout(() => {
+      storage.save(inventory).then(() => {
+        dirty.current = false
+        setSaveState('saved')
+      }).catch(() => setSaveState('error'))
+    }, 450)
+    return () => window.clearTimeout(timeout)
+  }, [inventory])
+
+  const updateInventory = (update: (current: PersistedInventory) => PersistedInventory) => {
+    dirty.current = true
+    setInventory((current) => current ? update(current) : current)
+  }
+
+  const handleExport = () => {
+    if (!inventory) return
+    const url = URL.createObjectURL(new Blob([serializeInventory(inventory)], { type: 'application/json' }))
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = 'packdb-inventory.json'
+    anchor.click()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleImport = async (file: File | undefined) => {
+    if (!file || !inventory) return
+    const incoming = deserializeInventory(await file.text())
+    if (!incoming) {
+      setImportReport('Import rejected: the file is malformed or uses an unsupported schema.')
+      return
+    }
+    const result = importMode === 'merge'
+      ? mergeInventory(inventory, incoming)
+      : { inventory: incoming, rejected: [] }
+    updateInventory(() => result.inventory)
+    setSelectedId(result.inventory.gearItems[0]?.id ?? '')
+    setImportReport(result.rejected.length
+      ? `Imported with ${result.rejected.length} rejected record(s): ${result.rejected.join('; ')}`
+      : `Import complete (${importMode}).`)
+  }
+
+  if (!inventory) return <div className="app-loading" role="status">Loading your pack…</div>
+
+  const { gearItems: items, categories, userSettings, loadouts } = inventory
+  const activeLoadout = loadouts[0] ?? { id: 'default', name: 'New loadout', entries: [] }
+  const categoryLabels = Object.fromEntries(categories.map((category) => [category.id, category.label]))
+  const itemsById = new Map(items.map((item) => [item.id, item]))
+  const packedItemIds = new Set(activeLoadout.entries.map((entry) => entry.gearItemId))
+  const filteredItems = items.filter((item) =>
+    `${item.name} ${item.brand} ${categoryLabels[item.categoryId] ?? ''}`.toLowerCase().includes(query.toLowerCase()),
   )
   const selected = items.find((item) => item.id === selectedId) ?? items[0]
-  const togglePacked = (id: string) =>
-    setEntries((current) => {
-      const existing = current.find((entry) => entry.gearItemId === id)
-      if (existing) return current.filter((entry) => entry.id !== existing.id)
-
-      return [
-        ...current,
-        {
-          id: `olympic-traverse-${id}`,
-          gearItemId: id,
-          quantity: 1,
-          packed: true,
-          carryClassification: 'carried',
-        },
-      ]
-    })
+  const togglePacked = (id: string) => updateInventory((current) => ({
+    ...current,
+    loadouts: current.loadouts.map((loadout, index) => index ? loadout : {
+      ...loadout,
+      entries: loadout.entries.some((entry) => entry.gearItemId === id)
+        ? loadout.entries.filter((entry) => entry.gearItemId !== id)
+        : [...loadout.entries, { id: `${loadout.id}-${id}`, gearItemId: id, quantity: 1, packed: true, carryClassification: 'carried' }],
+    }),
+  }))
 
   return (
     <div id="top" className="app-shell">
       <header className="hud">
         <BrandMark />
-        <nav aria-label="Primary navigation">
-          <a className="active" href="#vault-title">
-            Vault
-          </a>
-          <a href="#loadout-title">Loadouts</a>
-        </nav>
+        <nav aria-label="Primary navigation"><a className="active" href="#vault-title">Vault</a><a href="#loadout-title">Loadouts</a></nav>
         <div className="hud__right">
-          <span className="weather">
-            <CloudSun size={17} /> 54°F · Olympic NP
+          <span className={`save-status save-status--${saveState}`} role="status">
+            {saveState === 'saving' ? 'Saving…' : saveState === 'error' ? 'Save error' : saveState === 'saved' ? 'Saved' : 'Local'}
           </span>
-          <button className="icon-button ghost" aria-label="Notifications">
-            <Bell size={18} />
-          </button>
-          <button className="profile" aria-label="Open profile">
-            <CircleUserRound size={22} />
-            <span>Alex</span>
-            <ChevronDown size={14} />
-          </button>
+          <button className="hud-action" onClick={handleExport}><Download size={15} /> Export</button>
+          <label className="hud-action"><Upload size={15} /> Import<input className="sr-only" type="file" accept="application/json,.json" onChange={(event) => void handleImport(event.target.files?.[0])} /></label>
+          <select aria-label="Import behavior" value={importMode} onChange={(event) => setImportMode(event.target.value as 'merge' | 'overwrite')}><option value="merge">Merge import</option><option value="overwrite">Overwrite all</option></select>
+          <span className="weather"><CloudSun size={17} /> 54°F · Olympic NP</span>
+          <button className="icon-button ghost" aria-label="Notifications"><Bell size={18} /></button>
+          <button className="profile" aria-label="Open profile"><CircleUserRound size={22} /><span>Alex</span><ChevronDown size={14} /></button>
         </div>
       </header>
+      {importReport && <div className="import-report" role="alert">{importReport}<button onClick={() => setImportReport('')} aria-label="Dismiss import report">×</button></div>}
       <main className="workspace">
-        <GearVault
-          items={filteredItems}
-          selectedId={selectedId}
-          query={query}
-          onQueryChange={setQuery}
-          onSelect={setSelectedId}
-          onTogglePacked={togglePacked}
-          packedItemIds={packedItemIds}
-          categoryLabels={categoryLabels}
-          displayWeightUnit={userSettings.displayWeightUnit}
-        />
-        <ActiveLoadout
-          itemsById={itemsById}
-          loadout={{ ...seedInventory.loadouts[0], entries }}
-          capacity={userSettings.carryCapacityGrams}
-          categoryLabels={categoryLabels}
-          displayWeightUnit={userSettings.displayWeightUnit}
-          onRemove={togglePacked}
-        />
-        <ItemInspector
-          item={selected}
-          categoryLabel={categoryLabels[selected.categoryId]}
-          displayWeightUnit={userSettings.displayWeightUnit}
-          isInLoadout={packedItemIds.has(selected.id)}
-        />
+        <GearVault items={filteredItems} selectedId={selectedId} query={query} onQueryChange={setQuery} onSelect={setSelectedId} onTogglePacked={togglePacked} packedItemIds={packedItemIds} categoryLabels={categoryLabels} displayWeightUnit={userSettings.displayWeightUnit} />
+        <ActiveLoadout itemsById={itemsById} loadout={activeLoadout} capacity={userSettings.carryCapacityGrams} categoryLabels={categoryLabels} displayWeightUnit={userSettings.displayWeightUnit} onRemove={togglePacked} />
+        {selected && <ItemInspector item={selected} categoryLabel={categoryLabels[selected.categoryId] ?? 'Uncategorized'} displayWeightUnit={userSettings.displayWeightUnit} isInLoadout={packedItemIds.has(selected.id)} />}
       </main>
-      <footer>
-        <span>Pack lighter. Go farther.</span>
-        <span>PackDB / Field build 0.1</span>
-      </footer>
+      <footer><span>Pack lighter. Go farther.</span><span>PackDB / Field build 0.1</span></footer>
     </div>
   )
 }
