@@ -1,15 +1,32 @@
 import { CheckCircle2, MoreHorizontal, TentTree, X } from 'lucide-react'
-import type { GearItem } from '../../types/gear'
+import type { DisplayWeightUnit, GearItem, Loadout } from '../../types/gear'
 import { formatWeight } from '../../lib/weight'
 
 interface Props {
-  items: GearItem[]
+  itemsById: Map<string, GearItem>
+  loadout: Loadout
   capacity: number
+  categoryLabels: Record<string, string>
+  displayWeightUnit: DisplayWeightUnit
   onRemove: (id: string) => void
 }
 
-export function ActiveLoadout({ items, capacity, onRemove }: Props) {
-  const total = items.reduce((sum, item) => sum + item.weightGrams, 0)
+export function ActiveLoadout({
+  itemsById,
+  loadout,
+  capacity,
+  categoryLabels,
+  displayWeightUnit,
+  onRemove,
+}: Props) {
+  const entries = loadout.entries.flatMap((entry) => {
+    const item = itemsById.get(entry.gearItemId)
+    return item ? [{ entry, item }] : []
+  })
+  const total = entries.reduce(
+    (sum, { entry, item }) => sum + item.weightGrams * entry.quantity,
+    0,
+  )
   const percent = Math.round((total / capacity) * 100)
   const encumbered = total > capacity
   return (
@@ -17,7 +34,7 @@ export function ActiveLoadout({ items, capacity, onRemove }: Props) {
       <div className="section-heading">
         <div>
           <p className="eyebrow">Active Loadout</p>
-          <h2 id="loadout-title">Olympic Traverse</h2>
+          <h2 id="loadout-title">{loadout.name}</h2>
         </div>
         <button className="icon-button ghost" aria-label="Loadout options">
           <MoreHorizontal size={20} />
@@ -34,7 +51,8 @@ export function ActiveLoadout({ items, capacity, onRemove }: Props) {
         <div className="capacity-row">
           <span>Carry Capacity</span>
           <strong>
-            {formatWeight(total)} <small>/ {formatWeight(capacity)}</small>
+            {formatWeight(total, displayWeightUnit)}{' '}
+            <small>/ {formatWeight(capacity, displayWeightUnit)}</small>
           </strong>
         </div>
         <div className="meter">
@@ -49,23 +67,28 @@ export function ActiveLoadout({ items, capacity, onRemove }: Props) {
             <CheckCircle2 size={13} />{' '}
             {encumbered
               ? 'Encumbered'
-              : `${formatWeight(capacity - total)} available`}
+              : `${formatWeight(capacity - total, displayWeightUnit)} available`}
           </span>
         </div>
       </div>
       <div className="loadout-label">
         <span>Packed gear</span>
-        <span>{items.length} items</span>
+        <span>{entries.length} items</span>
       </div>
       <ul className="packed-list">
-        {items.map((item) => (
-          <li key={item.id}>
+        {entries.map(({ entry, item }) => (
+          <li key={entry.id}>
             <span className="item-dot" style={{ background: item.color }} />
             <span>
               <strong>{item.name}</strong>
-              <small>{item.category}</small>
+              <small>{categoryLabels[item.categoryId]}</small>
             </span>
-            <b>{formatWeight(item.weightGrams)}</b>
+            <b>
+              {formatWeight(
+                item.weightGrams * entry.quantity,
+                displayWeightUnit,
+              )}
+            </b>
             <button
               onClick={() => onRemove(item.id)}
               aria-label={`Remove ${item.name}`}
