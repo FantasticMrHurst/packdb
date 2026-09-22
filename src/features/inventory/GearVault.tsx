@@ -1,30 +1,62 @@
-import { Check, Plus, Search, SlidersHorizontal } from 'lucide-react'
-import type { DisplayWeightUnit, GearItem } from '../../types/gear'
+import { Check, Copy, Edit3, Plus, Search, Trash2 } from 'lucide-react'
+import type {
+  DisplayWeightUnit,
+  GearCategory,
+  GearItem,
+} from '../../types/gear'
 import { formatWeight } from '../../lib/weight'
 
+export type SortOption = 'name' | 'weight' | 'category' | 'modified'
+export interface Filters {
+  category: string
+  tag: string
+  status: string
+}
 interface Props {
   items: GearItem[]
+  totalItems: number
   selectedId: string
   query: string
   onQueryChange: (query: string) => void
   onSelect: (id: string) => void
   onTogglePacked: (id: string) => void
+  onAdd: () => void
+  onEdit: (item: GearItem) => void
+  onDuplicate: (item: GearItem) => void
+  onDelete: (item: GearItem) => void
   packedItemIds: Set<string>
   categoryLabels: Record<string, string>
+  categories: GearCategory[]
   displayWeightUnit: DisplayWeightUnit
+  filters: Filters
+  onFiltersChange: (filters: Filters) => void
+  sort: SortOption
+  onSortChange: (sort: SortOption) => void
 }
 
-export function GearVault({
-  items,
-  selectedId,
-  query,
-  onQueryChange,
-  onSelect,
-  onTogglePacked,
-  packedItemIds,
-  categoryLabels,
-  displayWeightUnit,
-}: Props) {
+export function GearVault(props: Props) {
+  const {
+    items,
+    totalItems,
+    selectedId,
+    query,
+    onQueryChange,
+    onSelect,
+    onTogglePacked,
+    onAdd,
+    onEdit,
+    onDuplicate,
+    onDelete,
+    packedItemIds,
+    categoryLabels,
+    categories,
+    displayWeightUnit,
+    filters,
+    onFiltersChange,
+    sort,
+    onSortChange,
+  } = props
+  const tags = [...new Set(items.flatMap((item) => item.tags ?? []))].sort()
   return (
     <section className="panel vault" aria-labelledby="vault-title">
       <div className="section-heading">
@@ -32,7 +64,9 @@ export function GearVault({
           <p className="eyebrow">Inventory</p>
           <h1 id="vault-title">Gear Vault</h1>
         </div>
-        <span className="count">{items.length} items</span>
+        <button className="add-item" onClick={onAdd}>
+          <Plus size={16} /> Add item
+        </button>
       </div>
       <div className="search-row">
         <label className="search">
@@ -40,15 +74,72 @@ export function GearVault({
           <span className="sr-only">Search gear</span>
           <input
             value={query}
-            onChange={(event) => onQueryChange(event.target.value)}
+            onChange={(e) => onQueryChange(e.target.value)}
             placeholder="Search your gear..."
           />
         </label>
-        <button className="icon-button" aria-label="Filter gear">
-          <SlidersHorizontal size={18} />
-        </button>
       </div>
-      <div className="gear-list">
+      <div className="filter-grid" aria-label="Inventory filters">
+        <label>
+          <span>Category</span>
+          <select
+            value={filters.category}
+            onChange={(e) =>
+              onFiltersChange({ ...filters, category: e.target.value })
+            }
+          >
+            <option value="">All categories</option>
+            {categories.map((c) => (
+              <option value={c.id} key={c.id}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Tag</span>
+          <select
+            value={filters.tag}
+            onChange={(e) =>
+              onFiltersChange({ ...filters, tag: e.target.value })
+            }
+          >
+            <option value="">All tags</option>
+            {tags.map((tag) => (
+              <option key={tag}>{tag}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          <span>Loadout</span>
+          <select
+            value={filters.status}
+            onChange={(e) =>
+              onFiltersChange({ ...filters, status: e.target.value })
+            }
+          >
+            <option value="">Any status</option>
+            <option value="packed">In loadout</option>
+            <option value="unpacked">Not in loadout</option>
+          </select>
+        </label>
+        <label>
+          <span>Sort by</span>
+          <select
+            value={sort}
+            onChange={(e) => onSortChange(e.target.value as SortOption)}
+          >
+            <option value="name">Name</option>
+            <option value="weight">Weight</option>
+            <option value="category">Category</option>
+            <option value="modified">Recently modified</option>
+          </select>
+        </label>
+      </div>
+      <p className="result-count">
+        {items.length} of {totalItems} items
+      </p>
+      <div className="gear-grid">
         {items.map((item) => (
           <article
             className={`gear-card ${selectedId === item.id ? 'is-selected' : ''}`}
@@ -62,35 +153,89 @@ export function GearVault({
               <span
                 className="gear-thumb"
                 style={{ '--accent': item.color } as React.CSSProperties}
-                aria-hidden="true"
               >
-                {item.name.charAt(0)}
+                {item.photoUrl ? (
+                  <img src={item.photoUrl} alt="" />
+                ) : (
+                  <span aria-hidden="true">{item.name.charAt(0)}</span>
+                )}
               </span>
               <span className="gear-card__copy">
                 <strong>{item.name}</strong>
                 <span>
-                  {item.brand} · {categoryLabels[item.categoryId]}
+                  {categoryLabels[item.categoryId] ?? 'Uncategorized'}
                 </span>
-              </span>
-              <span className="gear-weight">
-                {formatWeight(item.weightGrams, displayWeightUnit)}
+                <b>
+                  {formatWeight(
+                    item.weightGrams,
+                    item.displayWeightUnit ?? displayWeightUnit,
+                  )}
+                </b>
               </span>
             </button>
             <button
-              className={`pack-toggle ${packedItemIds.has(item.id) ? 'is-packed' : ''}`}
+              className={`pack-action ${packedItemIds.has(item.id) ? 'is-packed' : ''}`}
               onClick={() => onTogglePacked(item.id)}
-              aria-label={`${packedItemIds.has(item.id) ? 'Remove' : 'Add'} ${item.name} ${packedItemIds.has(item.id) ? 'from' : 'to'} loadout`}
             >
-              {packedItemIds.has(item.id) ? (
-                <Check size={16} />
-              ) : (
-                <Plus size={16} />
-              )}
+              <span>
+                {packedItemIds.has(item.id) ? (
+                  <Check size={14} />
+                ) : (
+                  <Plus size={14} />
+                )}
+              </span>
+              {packedItemIds.has(item.id) ? 'Added' : 'Add to loadout'}
             </button>
+            <div
+              className="card-actions"
+              aria-label={`Actions for ${item.name}`}
+            >
+              <button
+                onClick={() => onEdit(item)}
+                aria-label={`Edit ${item.name}`}
+              >
+                <Edit3 size={14} />
+              </button>
+              <button
+                onClick={() => onDuplicate(item)}
+                aria-label={`Duplicate ${item.name}`}
+              >
+                <Copy size={14} />
+              </button>
+              <button
+                onClick={() => onDelete(item)}
+                aria-label={`Delete ${item.name}`}
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
           </article>
         ))}
-        {items.length === 0 && (
-          <p className="empty">No gear matches “{query}”.</p>
+        {!items.length && totalItems === 0 && (
+          <div className="empty-state">
+            <span>＋</span>
+            <h3>Your vault is ready</h3>
+            <p>Add your first piece of gear to start building loadouts.</p>
+            <button className="button-primary" onClick={onAdd}>
+              Add your first item
+            </button>
+          </div>
+        )}
+        {!items.length && totalItems > 0 && (
+          <div className="empty-state">
+            <Search />
+            <h3>No matching gear</h3>
+            <p>Try changing your search or filters.</p>
+            <button
+              className="button-secondary"
+              onClick={() => {
+                onQueryChange('')
+                onFiltersChange({ category: '', tag: '', status: '' })
+              }}
+            >
+              Clear filters
+            </button>
+          </div>
         )}
       </div>
     </section>
