@@ -33,7 +33,8 @@ introduced as release blockers or quietly coupled to local storage.
 
 ## Local development
 
-PackDB requires Node.js 20 or newer and npm 10 or newer.
+PackDB requires Node.js 22 or newer and npm 10 or newer. CI uses the committed
+lockfile with `npm ci`, so dependency installation is deterministic.
 
 ```bash
 npm install          # install dependencies
