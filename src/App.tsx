@@ -137,7 +137,11 @@ export default function App() {
   if (!inventory)
     return (
       <div className="app-loading" role="status">
-        Loading your pack…
+        <span className="sr-only">Loading your pack…</span>
+        <div className="loading-mark">PACKDB // SYNC</div>
+        <div className="skeleton skeleton--wide" />
+        <div className="skeleton" />
+        <div className="skeleton skeleton--short" />
       </div>
     )
 

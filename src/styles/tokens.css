@@ -1,0 +1,55 @@
+:root {
+  /* Surfaces */
+  --surface-canvas: #070b0e;
+  --surface-header: #090f13;
+  --surface-panel: #10181d;
+  --surface-panel-raised: #152128;
+  --surface-control: #0c1419;
+  --surface-hover: #19272e;
+
+  /* Borders and focus */
+  --border-subtle: #263942;
+  --border-strong: #3b5660;
+  --focus-ring: #77d5e7;
+
+  /* Functional status colors (never used as decorative rarity) */
+  --status-info: #69c6d8;
+  --status-success: #73d39a;
+  --status-warning: #f0be62;
+  --status-danger: #ff7e72;
+  --status-worn: #91baf5;
+  --status-consumable: #e4bd72;
+  --status-muted: #93a3a9;
+
+  /* Typography */
+  --text-primary: #f1f6f7;
+  --text-secondary: #b2c1c6;
+  --text-muted: #84969d;
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-display: 'Manrope', system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  --tracking-label: 0.14em;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Elevation and motion */
+  --elevation-panel: 0 18px 50px rgb(0 0 0 / 0.28);
+  --elevation-float: 0 24px 70px rgb(0 0 0 / 0.46);
+  --motion-fast: 120ms;
+  --motion-standard: 180ms;
+  --ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --clip-panel: polygon(
+    0 0,
+    calc(100% - 14px) 0,
+    100% 14px,
+    100% 100%,
+    14px 100%,
+    0 calc(100% - 14px)
+  );
+}
