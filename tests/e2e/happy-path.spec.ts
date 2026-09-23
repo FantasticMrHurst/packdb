@@ -16,18 +16,21 @@ test('local-first happy path can be exported and restored', async ({
   await dialog.getByLabel('Unit').selectOption('kg')
   await dialog.getByRole('button', { name: 'Add to vault' }).click()
 
+  const loadoutTab = page.getByRole('tab', { name: 'Loadout' })
+  const vaultTab = page.getByRole('tab', { name: 'Vault' })
+  if (await loadoutTab.isVisible()) await loadoutTab.click()
   page.once('dialog', (prompt) => prompt.accept('Capacity test'))
   await page.getByRole('button', { name: 'New' }).click()
+  if (await vaultTab.isVisible()) await vaultTab.click()
   await page
     .getByRole('button', { name: 'Add Anvil to active loadout' })
     .click()
-  const loadoutTab = page.getByRole('tab', { name: 'Loadout' })
   if (await loadoutTab.isVisible()) await loadoutTab.click()
   await expect(page.getByText('Over capacity')).toBeVisible()
   await page
     .getByRole('button', { name: 'Remove Anvil from Capacity test' })
     .click()
-  await expect(page.getByText(/available/)).toBeVisible()
+  await expect(page.getByTestId('capacity-status')).toContainText('available')
   await page.getByRole('button', { name: 'Undo' }).click()
 
   const downloadPromise = page.waitForEvent('download')

@@ -10,4 +10,8 @@ HTMLDialogElement.prototype.close ??= function () {
   this.dispatchEvent(new Event('close'))
 }
 
+window.requestAnimationFrame ??= (callback) =>
+  window.setTimeout(() => callback(performance.now()), 0)
+window.cancelAnimationFrame ??= window.clearTimeout
+
 afterEach(cleanup)

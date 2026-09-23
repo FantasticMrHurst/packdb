@@ -46,6 +46,12 @@ export function ItemDialog({ open, item, categories, onClose, onSave }: Props) {
 
   useEffect(() => {
     if (!open) return
+    const frame = window.requestAnimationFrame(() => nameRef.current?.focus())
+    return () => window.cancelAnimationFrame(frame)
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
     const preferred = item?.displayWeightUnit ?? 'g'
     const divisors = { g: 1, kg: 1000, oz: 28.349523125, lb: 453.59237 }
     /* The dialog keeps a draft that must be reset whenever a different item opens. */

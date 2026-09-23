@@ -143,7 +143,10 @@ export function ActiveLoadout(props: Props) {
         </div>
         <div className="capacity-row caption">
           <span>{percent}% of capacity</span>
-          <span className={encumbered ? 'status encumbered' : 'status'}>
+          <span
+            data-testid="capacity-status"
+            className={encumbered ? 'status encumbered' : 'status'}
+          >
             {encumbered ? (
               <AlertTriangle size={13} />
             ) : (
