@@ -65,4 +65,25 @@ describe('ItemDialog', () => {
     })
     expect(screen.getByText(/smaller than 1 MB/)).toBeInTheDocument()
   })
+
+  it('wraps keyboard focus in both directions', () => {
+    render(
+      <ItemDialog
+        open
+        categories={categories}
+        onClose={vi.fn()}
+        onSave={vi.fn()}
+      />,
+    )
+    const name = screen.getByLabelText(/Name/)
+    const submit = screen.getByRole('button', { name: 'Add to vault' })
+    const close = screen.getByRole('button', { name: 'Close dialog' })
+    name.focus()
+    fireEvent.keyDown(name, { key: 'Tab', shiftKey: true })
+    expect(submit).toHaveFocus()
+    fireEvent.keyDown(submit, { key: 'Tab' })
+    expect(close).toHaveFocus()
+    fireEvent.keyDown(close, { key: 'Tab' })
+    expect(name).toHaveFocus()
+  })
 })

@@ -24,6 +24,9 @@ export const MAX_IMAGE_BYTES = 1024 * 1024
 
 export function ItemDialog({ open, item, categories, onClose, onSave }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
+  const closeRef = useRef<HTMLButtonElement>(null)
+  const nameRef = useRef<HTMLInputElement>(null)
+  const submitRef = useRef<HTMLButtonElement>(null)
   const titleId = useId()
   const [name, setName] = useState('')
   const [photoUrl, setPhotoUrl] = useState('')
@@ -139,6 +142,24 @@ export function ItemDialog({ open, item, categories, onClose, onSave }: Props) {
       ref={dialogRef}
       className="item-dialog"
       aria-labelledby={titleId}
+      onKeyDown={(event) => {
+        if (event.key !== 'Tab') return
+        const activeElement = document.activeElement
+        if (
+          event.shiftKey &&
+          (activeElement === nameRef.current ||
+            activeElement === closeRef.current)
+        ) {
+          event.preventDefault()
+          submitRef.current?.focus()
+        } else if (!event.shiftKey && activeElement === submitRef.current) {
+          event.preventDefault()
+          closeRef.current?.focus()
+        } else if (!event.shiftKey && activeElement === closeRef.current) {
+          event.preventDefault()
+          nameRef.current?.focus()
+        }
+      }}
       onCancel={(event) => {
         event.preventDefault()
         onClose()
@@ -152,6 +173,7 @@ export function ItemDialog({ open, item, categories, onClose, onSave }: Props) {
             <h2 id={titleId}>{item ? 'Edit item' : 'Add an item'}</h2>
           </div>
           <button
+            ref={closeRef}
             type="button"
             className="icon-button"
             onClick={onClose}
@@ -166,6 +188,7 @@ export function ItemDialog({ open, item, categories, onClose, onSave }: Props) {
               Name <b aria-hidden="true">*</b>
             </span>
             <input
+              ref={nameRef}
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -278,7 +301,7 @@ export function ItemDialog({ open, item, categories, onClose, onSave }: Props) {
           <button type="button" className="button-secondary" onClick={onClose}>
             Cancel
           </button>
-          <button className="button-primary" type="submit">
+          <button ref={submitRef} className="button-primary" type="submit">
             {item ? 'Save changes' : 'Add to vault'}
           </button>
         </footer>

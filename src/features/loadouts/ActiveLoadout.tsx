@@ -263,7 +263,7 @@ export function ActiveLoadout(props: Props) {
                       </label>
                       <button
                         onClick={() => onRemove(entry.id)}
-                        aria-label={`Remove ${item.name} from trip`}
+                        aria-label={`Remove ${item.name} from ${loadout.name}`}
                       >
                         <X size={15} />
                       </button>

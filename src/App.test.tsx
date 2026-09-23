@@ -94,7 +94,7 @@ describe('PackDB shell', () => {
     render(<App />)
     await userEvent.click(
       await screen.findByRole('button', {
-        name: 'Remove Copper Spur HV UL2 from trip',
+        name: 'Remove Copper Spur HV UL2 from Olympic Traverse',
       }),
     )
     expect(
@@ -228,7 +228,7 @@ describe('PackDB shell', () => {
     render(<App />)
     expect(await screen.findByText('Over capacity')).toBeInTheDocument()
     for (const button of screen.getAllByRole('button', {
-      name: /Remove .* from trip/,
+      name: /Remove .* from Olympic Traverse/,
     }))
       await userEvent.click(button)
     expect(screen.getByText(/kg available/)).toBeInTheDocument()

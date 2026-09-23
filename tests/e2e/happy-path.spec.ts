@@ -21,9 +21,12 @@ test('local-first happy path can be exported and restored', async ({
   await page
     .getByRole('button', { name: 'Add Anvil to active loadout' })
     .click()
-  await page.getByRole('tab', { name: 'Loadout' }).click()
+  const loadoutTab = page.getByRole('tab', { name: 'Loadout' })
+  if (await loadoutTab.isVisible()) await loadoutTab.click()
   await expect(page.getByText('Over capacity')).toBeVisible()
-  await page.getByRole('button', { name: 'Remove Anvil from trip' }).click()
+  await page
+    .getByRole('button', { name: 'Remove Anvil from Capacity test' })
+    .click()
   await expect(page.getByText(/available/)).toBeVisible()
   await page.getByRole('button', { name: 'Undo' }).click()
 
@@ -33,7 +36,21 @@ test('local-first happy path can be exported and restored', async ({
   const chunks: Buffer[] = []
   for await (const chunk of stream) chunks.push(Buffer.from(chunk))
 
-  await page.evaluate(() => localStorage.clear())
+  await page.evaluate(() =>
+    localStorage.setItem(
+      'packdb.inventory',
+      JSON.stringify({
+        schemaVersion: 2,
+        gearItems: [],
+        categories: [],
+        loadouts: [],
+        userSettings: {
+          displayWeightUnit: 'kg',
+          carryCapacityGrams: 3200,
+        },
+      }),
+    ),
+  )
   await page.reload()
   await page.getByLabel(/Import/).setInputFiles({
     name: 'packdb-inventory.json',

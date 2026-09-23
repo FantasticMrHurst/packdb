@@ -1563,11 +1563,17 @@ footer {
 }
 
 @media (max-width: 700px) {
-  .hud__right > .hud-action,
   .hud__right > select,
   .hud__right > .save-status,
-  .hud__right > .icon-button {
+  .hud__right > .icon-button,
+  .hud__right > .profile {
     display: none;
+  }
+  .hud__right {
+    gap: 4px;
+  }
+  .hud-action {
+    padding-inline: 7px;
   }
   .mobile-tabs {
     background: var(--surface-canvas);
@@ -1588,6 +1594,25 @@ footer {
   .workspace-region--loadout.mobile-hidden .capacity-card {
     background: var(--surface-panel);
     box-shadow: var(--elevation-panel);
+  }
+}
+@media (min-width: 701px) and (max-width: 1050px) {
+  .hud {
+    padding-inline: 20px;
+  }
+  .hud__right > select,
+  .hud__right > .save-status,
+  .hud__right > .icon-button,
+  .hud__right > .profile {
+    display: none;
+  }
+  .workspace {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .workspace-region,
+  .panel,
+  .inspector {
+    min-width: 0;
   }
 }
 @media (prefers-reduced-motion: reduce) {
