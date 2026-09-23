@@ -8,6 +8,24 @@ import {
 } from '../../types/gear'
 
 export const STORAGE_KEY = 'packdb.inventory'
+export const MAX_IMPORT_BYTES = 2 * 1024 * 1024
+
+export const isSafeHttpUrl = (value: string) => {
+  if (!value) return true
+  try {
+    return ['http:', 'https:'].includes(new URL(value).protocol)
+  } catch {
+    return false
+  }
+}
+
+const safeImageSource = (value: string) =>
+  [
+    'data:image/jpeg;',
+    'data:image/png;',
+    'data:image/webp;',
+    'data:image/gif;',
+  ].some((prefix) => value.startsWith(prefix)) || isSafeHttpUrl(value)
 
 export interface StorageAdapter {
   load(): Promise<PersistedInventory | null>
@@ -37,10 +55,10 @@ const validItem = (value: unknown): value is GearItem =>
   isString(value.brand) &&
   (!('photoUrl' in value) ||
     value.photoUrl === undefined ||
-    isString(value.photoUrl)) &&
+    (isString(value.photoUrl) && safeImageSource(value.photoUrl))) &&
   (!('productUrl' in value) ||
     value.productUrl === undefined ||
-    isString(value.productUrl)) &&
+    (isString(value.productUrl) && isSafeHttpUrl(value.productUrl))) &&
   isFiniteNumber(value.weightGrams) &&
   value.weightGrams >= 0 &&
   value.weightUnit === 'g' &&
@@ -163,7 +181,7 @@ export function mergeInventory(
   }
 }
 
-/** Small structured records and remote photo URLs fit localStorage; no image blobs are stored. */
+/** Store the validated inventory as one versioned local-first record. */
 export function createLocalStorageAdapter(
   storage: Storage = window.localStorage,
 ): StorageAdapter {

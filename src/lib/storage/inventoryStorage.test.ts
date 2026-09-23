@@ -21,6 +21,25 @@ describe('inventory persistence', () => {
     ).toBeNull()
   })
 
+  it('rejects executable and non-web links from imported data', () => {
+    expect(
+      validateInventory({
+        ...seedInventory,
+        gearItems: [
+          { ...seedInventory.gearItems[0], productUrl: 'javascript:alert(1)' },
+        ],
+      }),
+    ).toBeNull()
+    expect(
+      validateInventory({
+        ...seedInventory,
+        gearItems: [
+          { ...seedInventory.gearItems[0], photoUrl: 'file:///secret' },
+        ],
+      }),
+    ).toBeNull()
+  })
+
   it('migrates schema version 1 records', () => {
     const legacy = { ...seedInventory, schemaVersion: 1 }
     expect(validateInventory(legacy)).toEqual({

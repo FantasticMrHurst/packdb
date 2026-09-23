@@ -21,11 +21,20 @@ This first slice establishes the responsive application shell and demonstrates t
 - adding available gear to and removing gear from the Loadout; and
 - a three-region desktop layout that becomes a focused, touch-friendly single-column flow on smaller screens.
 
-Persistence, authentication, multiple saved Loadouts, item editing, quantities, import/export, and cloud sync are intentionally outside the initial scope.
+The validated local-first slice now includes persistence, multiple saved Loadouts,
+item editing, quantities, and JSON import/export.
+
+### Deliberately deferred
+
+Accounts, cloud synchronization, collaborative lists, retailer integrations, and
+shared public loadouts remain out of scope until the local-first workflow has
+been validated against the release criteria below. These features must not be
+introduced as release blockers or quietly coupled to local storage.
 
 ## Local development
 
-PackDB requires Node.js 20 or newer and npm 10 or newer.
+PackDB requires Node.js 22 or newer and npm 10 or newer. CI uses the committed
+lockfile with `npm ci`, so dependency installation is deterministic.
 
 ```bash
 npm install          # install dependencies
@@ -37,7 +46,56 @@ npm run format       # format source files with Prettier
 npm run format:check # verify formatting without changing files
 npm test             # run the Vitest suite once
 npm run test:watch   # run tests interactively
+npm run test:e2e     # run Playwright in four responsive viewport projects
+npm run check        # run every automated release check
 ```
+
+Install Playwright's Chromium binary once after installing dependencies:
+
+```bash
+npx playwright install chromium
+```
+
+## Production and deployment
+
+`npm run build` type-checks the application and emits the static site to
+`dist/`. `npm run preview` serves that exact artifact for local smoke testing.
+Assets use relative paths, so the artifact can be hosted at either a domain root
+or a project subpath. `netlify.toml` supplies a Netlify build and SPA fallback.
+The GitHub Actions workflow runs release checks for pull requests and deploys
+successful `main` builds to GitHub Pages. Enable **GitHub Actions** as the Pages
+source in repository settings before the first release.
+
+## Release criteria
+
+A release candidate is ready only when all of the following are true:
+
+- `npm run format:check`, `npm run lint`, `npm test`, and `npm run build` pass.
+- `npm run test:e2e` passes for the phone (390×844), tablet (768×1024), laptop
+  (1366×768), and wide-desktop (1920×1080) projects with no horizontal overflow.
+- The end-to-end local-first journey passes: create gear, create a trip, exceed
+  capacity, adjust its loadout, export the JSON, clear local state, and restore it.
+- Persistence reload, merge/overwrite import, malformed JSON, import and image
+  size limits, supported image types, safe external links, and storage-quota
+  failure paths have automated coverage.
+- The built `dist/` artifact is smoke-tested through `npm run preview`; a direct
+  route refresh and asset loading work on the intended static host.
+- No deferred network/account capability is required for the core workflow.
+
+### Manual accessibility checklist
+
+- Complete item creation, editing, filtering, trip creation, loadout adjustment,
+  export, and import using only Tab, Shift+Tab, Enter, Space, and Escape.
+- Confirm focus is visible, enters a dialog at its first field, cannot escape the
+  open modal, returns to the trigger after close, and follows removal/add actions.
+- With VoiceOver, NVDA, or another screen reader, confirm controls have useful
+  names and additions, removals, saves, errors, and capacity changes are announced.
+- At 200% and 400% zoom, confirm content reflows without two-dimensional scrolling
+  and remains operable at a 320 px CSS viewport.
+- Enable the operating system's reduced-motion preference and confirm transitions
+  and animations are removed without hiding state changes.
+- Check keyboard focus, text, status, error, and disabled-control contrast in both
+  ordinary and high-contrast/forced-colors modes.
 
 ## Browser and responsive support
 

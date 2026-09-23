@@ -36,6 +36,11 @@ export function ItemInspector({
       <h3>{item.name}</h3>
       <p className="maker">{item.brand}</p>
       <p className="description">{item.description}</p>
+      {item.productUrl && (
+        <a href={item.productUrl} target="_blank" rel="noopener noreferrer">
+          View product website
+        </a>
+      )}
       <dl className="specs">
         <div>
           <dt>

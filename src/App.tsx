@@ -20,6 +20,7 @@ import { ActiveLoadout } from './features/loadouts/ActiveLoadout'
 import {
   createLocalStorageAdapter,
   deserializeInventory,
+  MAX_IMPORT_BYTES,
   mergeInventory,
   serializeInventory,
 } from './lib/storage/inventoryStorage'
@@ -114,6 +115,10 @@ export default function App() {
 
   const handleImport = async (file: File | undefined) => {
     if (!file || !inventory) return
+    if (file.size > MAX_IMPORT_BYTES) {
+      setImportReport('Import rejected: files must be 2 MB or smaller.')
+      return
+    }
     const incoming = deserializeInventory(await file.text())
     if (!incoming) {
       setImportReport(

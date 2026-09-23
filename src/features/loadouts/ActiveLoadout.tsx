@@ -143,7 +143,10 @@ export function ActiveLoadout(props: Props) {
         </div>
         <div className="capacity-row caption">
           <span>{percent}% of capacity</span>
-          <span className={encumbered ? 'status encumbered' : 'status'}>
+          <span
+            data-testid="capacity-status"
+            className={encumbered ? 'status encumbered' : 'status'}
+          >
             {encumbered ? (
               <AlertTriangle size={13} />
             ) : (
@@ -263,7 +266,7 @@ export function ActiveLoadout(props: Props) {
                       </label>
                       <button
                         onClick={() => onRemove(entry.id)}
-                        aria-label={`Remove ${item.name} from trip`}
+                        aria-label={`Remove ${item.name} from ${loadout.name}`}
                       >
                         <X size={15} />
                       </button>
