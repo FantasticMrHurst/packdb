@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { ImagePlus, X } from 'lucide-react'
 import { toGrams } from '../../lib/weight'
+import { isSafeHttpUrl } from '../../lib/storage/inventoryStorage'
 import type {
   DisplayWeightUnit,
   GearCategory,
@@ -19,14 +20,7 @@ type Errors = Partial<
   Record<'name' | 'weight' | 'category' | 'photo' | 'productUrl', string>
 >
 const imageTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
-const validHttpUrl = (value: string) => {
-  if (!value) return true
-  try {
-    return ['http:', 'https:'].includes(new URL(value).protocol)
-  } catch {
-    return false
-  }
-}
+export const MAX_IMAGE_BYTES = 1024 * 1024
 
 export function ItemDialog({ open, item, categories, onClose, onSave }: Props) {
   const dialogRef = useRef<HTMLDialogElement>(null)
@@ -78,6 +72,13 @@ export function ItemDialog({ open, item, categories, onClose, onSave }: Props) {
       }))
       return
     }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setErrors((current) => ({
+        ...current,
+        photo: 'Choose an image smaller than 1 MB.',
+      }))
+      return
+    }
     const reader = new FileReader()
     reader.onload = () => {
       setPhotoUrl(String(reader.result))
@@ -97,10 +98,10 @@ export function ItemDialog({ open, item, categories, onClose, onSave }: Props) {
     if (
       photoUrl &&
       !photoUrl.startsWith('data:image/') &&
-      !validHttpUrl(photoUrl)
+      !isSafeHttpUrl(photoUrl)
     )
       nextErrors.photo = 'Enter a valid HTTP or HTTPS image URL.'
-    if (!validHttpUrl(productUrl))
+    if (!isSafeHttpUrl(productUrl))
       nextErrors.productUrl = 'Enter a valid HTTP or HTTPS product link.'
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length) return
