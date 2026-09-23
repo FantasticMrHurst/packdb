@@ -1,4 +1,13 @@
-import { Check, Copy, Edit3, Plus, Search, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import {
+  Check,
+  Copy,
+  Edit3,
+  ImageOff,
+  Plus,
+  Search,
+  Trash2,
+} from 'lucide-react'
 import type {
   DisplayWeightUnit,
   GearCategory,
@@ -11,6 +20,27 @@ export interface Filters {
   category: string
   tag: string
   status: string
+}
+
+function GearThumbnail({ item }: { item: GearItem }) {
+  const [failed, setFailed] = useState(false)
+  const unavailable = !item.photoUrl || failed
+  return (
+    <span
+      className={`gear-thumb ${unavailable ? 'is-unavailable' : ''}`}
+      style={{ '--accent': item.color } as React.CSSProperties}
+      title={unavailable ? 'Image unavailable' : undefined}
+    >
+      {!unavailable ? (
+        <img src={item.photoUrl} alt="" onError={() => setFailed(true)} />
+      ) : (
+        <span className="image-fallback" aria-label="Image unavailable">
+          <ImageOff size={15} aria-hidden="true" />
+          <small>No image</small>
+        </span>
+      )}
+    </span>
+  )
 }
 interface Props {
   items: GearItem[]
@@ -157,16 +187,7 @@ export function GearVault(props: Props) {
               onClick={() => onSelect(item.id)}
               aria-label={`Inspect ${item.name}`}
             >
-              <span
-                className="gear-thumb"
-                style={{ '--accent': item.color } as React.CSSProperties}
-              >
-                {item.photoUrl ? (
-                  <img src={item.photoUrl} alt="" />
-                ) : (
-                  <span aria-hidden="true">{item.name.charAt(0)}</span>
-                )}
-              </span>
+              <GearThumbnail item={item} />
               <span className="gear-card__copy">
                 <strong>{item.name}</strong>
                 <span>

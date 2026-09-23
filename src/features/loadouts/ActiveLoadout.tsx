@@ -1,5 +1,6 @@
 import {
   CheckCircle2,
+  AlertTriangle,
   Copy,
   Plus,
   RotateCcw,
@@ -143,7 +144,11 @@ export function ActiveLoadout(props: Props) {
         <div className="capacity-row caption">
           <span>{percent}% of capacity</span>
           <span className={encumbered ? 'status encumbered' : 'status'}>
-            <CheckCircle2 size={13} />{' '}
+            {encumbered ? (
+              <AlertTriangle size={13} />
+            ) : (
+              <CheckCircle2 size={13} />
+            )}{' '}
             {encumbered
               ? 'Over capacity'
               : `${formatWeight(capacity - total, displayWeightUnit)} available`}
@@ -180,7 +185,7 @@ export function ActiveLoadout(props: Props) {
                 {rows.map(({ entry, item }) => (
                   <li
                     key={entry.id}
-                    className={!entry.packed ? 'is-unpacked' : ''}
+                    className={`${entry.packed ? 'is-packed' : 'is-unpacked'} is-${entry.carryClassification}`}
                   >
                     <span
                       className="item-dot"
