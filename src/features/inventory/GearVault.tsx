@@ -19,7 +19,8 @@ interface Props {
   query: string
   onQueryChange: (query: string) => void
   onSelect: (id: string) => void
-  onTogglePacked: (id: string) => void
+  onAddToLoadout: (id: string) => void
+  registerAddButton: (id: string, element: HTMLButtonElement | null) => void
   onAdd: () => void
   onEdit: (item: GearItem) => void
   onDuplicate: (item: GearItem) => void
@@ -42,7 +43,8 @@ export function GearVault(props: Props) {
     query,
     onQueryChange,
     onSelect,
-    onTogglePacked,
+    onAddToLoadout,
+    registerAddButton,
     onAdd,
     onEdit,
     onDuplicate,
@@ -144,6 +146,11 @@ export function GearVault(props: Props) {
           <article
             className={`gear-card ${selectedId === item.id ? 'is-selected' : ''}`}
             key={item.id}
+            draggable
+            onDragStart={(event) => {
+              event.dataTransfer.setData('text/gear-id', item.id)
+              event.dataTransfer.effectAllowed = 'copy'
+            }}
           >
             <button
               className="gear-card__main"
@@ -175,7 +182,9 @@ export function GearVault(props: Props) {
             </button>
             <button
               className={`pack-action ${packedItemIds.has(item.id) ? 'is-packed' : ''}`}
-              onClick={() => onTogglePacked(item.id)}
+              ref={(element) => registerAddButton(item.id, element)}
+              onClick={() => onAddToLoadout(item.id)}
+              aria-label={`Add ${item.name} to active loadout${packedItemIds.has(item.id) ? '; increments quantity' : ''}`}
             >
               <span>
                 {packedItemIds.has(item.id) ? (
@@ -184,7 +193,7 @@ export function GearVault(props: Props) {
                   <Plus size={14} />
                 )}
               </span>
-              {packedItemIds.has(item.id) ? 'Added' : 'Add to loadout'}
+              {packedItemIds.has(item.id) ? 'Add another' : 'Add to loadout'}
             </button>
             <div
               className="card-actions"

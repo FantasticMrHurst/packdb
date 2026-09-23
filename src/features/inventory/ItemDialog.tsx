@@ -51,6 +51,8 @@ export function ItemDialog({ open, item, categories, onClose, onSave }: Props) {
     if (!open) return
     const preferred = item?.displayWeightUnit ?? 'g'
     const divisors = { g: 1, kg: 1000, oz: 28.349523125, lb: 453.59237 }
+    /* The dialog keeps a draft that must be reset whenever a different item opens. */
+    /* eslint-disable react-hooks/set-state-in-effect */
     setName(item?.name ?? '')
     setPhotoUrl(item?.photoUrl ?? '')
     setProductUrl(item?.productUrl ?? '')
@@ -64,6 +66,7 @@ export function ItemDialog({ open, item, categories, onClose, onSave }: Props) {
     setTags(item?.tags?.join(', ') ?? '')
     setNotes(item?.notes ?? '')
     setErrors({})
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [open, item, categories])
 
   const choosePhoto = (file?: File) => {

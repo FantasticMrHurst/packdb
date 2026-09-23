@@ -23,7 +23,7 @@ import {
   mergeInventory,
   serializeInventory,
 } from './lib/storage/inventoryStorage'
-import type { GearItem, PersistedInventory } from './types/gear'
+import type { GearItem, LoadoutEntry, PersistedInventory } from './types/gear'
 
 const storage = createLocalStorageAdapter()
 type SaveState = 'loading' | 'idle' | 'saving' | 'saved' | 'error'
@@ -44,6 +44,14 @@ export default function App() {
   const [dialogItem, setDialogItem] = useState<GearItem | null | undefined>(
     undefined,
   )
+  const [activeLoadoutId, setActiveLoadoutId] = useState('')
+  const [mobileTab, setMobileTab] = useState<'vault' | 'loadout'>('vault')
+  const [announcement, setAnnouncement] = useState('')
+  const [undo, setUndo] = useState<{
+    label: string
+    restore: (inventory: PersistedInventory) => PersistedInventory
+  } | null>(null)
+  const addButtonRefs = useRef(new Map<string, HTMLButtonElement>())
   const dirty = useRef(false)
 
   useEffect(() => {
@@ -54,12 +62,14 @@ export default function App() {
         if (!active) return
         const next = stored ?? seedInventory
         setInventory(next)
+        setActiveLoadoutId(next.loadouts[0]?.id ?? '')
         setSelectedId(next.gearItems[0]?.id ?? '')
         setSaveState('idle')
       })
       .catch(() => {
         if (!active) return
         setInventory(seedInventory)
+        setActiveLoadoutId(seedInventory.loadouts[0]?.id ?? '')
         setSelectedId(seedInventory.gearItems[0]?.id ?? '')
         setSaveState('error')
       })
@@ -132,11 +142,12 @@ export default function App() {
     )
 
   const { gearItems: items, categories, userSettings, loadouts } = inventory
-  const activeLoadout = loadouts[0] ?? {
-    id: 'default',
-    name: 'New loadout',
-    entries: [],
-  }
+  const activeLoadout = loadouts.find(({ id }) => id === activeLoadoutId) ??
+    loadouts[0] ?? {
+      id: 'default',
+      name: 'New loadout',
+      entries: [],
+    }
   const categoryLabels = Object.fromEntries(
     categories.map((category) => [category.id, category.label]),
   )
@@ -170,29 +181,156 @@ export default function App() {
             : a.name.localeCompare(b.name),
     )
   const selected = items.find((item) => item.id === selectedId) ?? items[0]
-  const togglePacked = (id: string) =>
+  const addToLoadout = (id: string) => {
+    const item = itemsById.get(id)
+    if (!item) return
     updateInventory((current) => ({
       ...current,
-      loadouts: current.loadouts.map((loadout, index) =>
-        index
+      loadouts: current.loadouts.map((loadout) =>
+        loadout.id !== activeLoadout.id
           ? loadout
-          : {
-              ...loadout,
-              entries: loadout.entries.some((entry) => entry.gearItemId === id)
-                ? loadout.entries.filter((entry) => entry.gearItemId !== id)
-                : [
-                    ...loadout.entries,
-                    {
-                      id: `${loadout.id}-${id}`,
-                      gearItemId: id,
-                      quantity: 1,
-                      packed: true,
-                      carryClassification: 'carried',
-                    },
-                  ],
-            },
+          : loadout.entries.some((entry) => entry.gearItemId === id)
+            ? {
+                ...loadout,
+                entries: loadout.entries.map((entry) =>
+                  entry.gearItemId === id
+                    ? { ...entry, quantity: entry.quantity + 1 }
+                    : entry,
+                ),
+              }
+            : {
+                ...loadout,
+                entries: [
+                  ...loadout.entries,
+                  {
+                    id: `${loadout.id}-${id}-${Date.now()}`,
+                    gearItemId: id,
+                    quantity: 1,
+                    packed: true,
+                    carryClassification: 'carried',
+                  },
+                ],
+              },
       ),
     }))
+    const duplicate = activeLoadout.entries.some(
+      (entry) => entry.gearItemId === id,
+    )
+    setAnnouncement(
+      duplicate
+        ? `${item.name} quantity increased.`
+        : `${item.name} added to ${activeLoadout.name}.`,
+    )
+    window.setTimeout(() => addButtonRefs.current.get(id)?.focus(), 0)
+  }
+
+  const updateEntry = (id: string, patch: Partial<LoadoutEntry>) => {
+    updateInventory((current) => ({
+      ...current,
+      loadouts: current.loadouts.map((loadout) =>
+        loadout.id === activeLoadout.id
+          ? {
+              ...loadout,
+              entries: loadout.entries.map((entry) =>
+                entry.id === id ? { ...entry, ...patch } : entry,
+              ),
+            }
+          : loadout,
+      ),
+    }))
+    setAnnouncement('Loadout entry updated.')
+  }
+
+  const removeEntry = (entryId: string) => {
+    const entry = activeLoadout.entries.find(({ id }) => id === entryId)
+    if (!entry) return
+    const item = itemsById.get(entry.gearItemId)
+    updateInventory((current) => ({
+      ...current,
+      loadouts: current.loadouts.map((loadout) =>
+        loadout.id === activeLoadout.id
+          ? {
+              ...loadout,
+              entries: loadout.entries.filter(({ id }) => id !== entryId),
+            }
+          : loadout,
+      ),
+    }))
+    setUndo({
+      label: `${item?.name ?? 'Item'} removed.`,
+      restore: (current) => ({
+        ...current,
+        loadouts: current.loadouts.map((loadout) =>
+          loadout.id === activeLoadout.id
+            ? { ...loadout, entries: [...loadout.entries, entry] }
+            : loadout,
+        ),
+      }),
+    })
+    setAnnouncement(
+      `${item?.name ?? 'Item'} removed from ${activeLoadout.name}. Undo available.`,
+    )
+    window.setTimeout(
+      () => addButtonRefs.current.get(entry.gearItemId)?.focus(),
+      0,
+    )
+  }
+
+  const createTrip = () => {
+    const name = window.prompt('Name this trip', 'New backpacking trip')?.trim()
+    if (!name) return
+    const id = `trip-${Date.now()}`
+    updateInventory((current) => ({
+      ...current,
+      loadouts: [...current.loadouts, { id, name, entries: [] }],
+    }))
+    setActiveLoadoutId(id)
+    setAnnouncement(`${name} created.`)
+  }
+  const renameTrip = () => {
+    const name = window.prompt('Rename trip', activeLoadout.name)?.trim()
+    if (!name) return
+    updateInventory((current) => ({
+      ...current,
+      loadouts: current.loadouts.map((trip) =>
+        trip.id === activeLoadout.id ? { ...trip, name } : trip,
+      ),
+    }))
+    setAnnouncement(`Trip renamed to ${name}.`)
+  }
+  const duplicateTrip = () => {
+    const id = `trip-${Date.now()}`
+    const copy = {
+      ...activeLoadout,
+      id,
+      name: `${activeLoadout.name} copy`,
+      entries: activeLoadout.entries.map((entry, index) => ({
+        ...entry,
+        id: `${id}-${entry.gearItemId}-${index}`,
+      })),
+    }
+    updateInventory((current) => ({
+      ...current,
+      loadouts: [...current.loadouts, copy],
+    }))
+    setActiveLoadoutId(id)
+    setAnnouncement(`${copy.name} created.`)
+  }
+  const deleteTrip = () => {
+    if (
+      loadouts.length < 2 ||
+      !window.confirm(`Delete “${activeLoadout.name}”?`)
+    )
+      return
+    const index = loadouts.findIndex(({ id }) => id === activeLoadout.id)
+    const nextId = loadouts[index ? index - 1 : 1].id
+    updateInventory((current) => ({
+      ...current,
+      loadouts: current.loadouts.filter(({ id }) => id !== activeLoadout.id),
+    }))
+    setActiveLoadoutId(nextId)
+    setAnnouncement(`${activeLoadout.name} deleted.`)
+  }
   const saveItem = (item: GearItem) => {
     updateInventory((current) => ({
       ...current,
@@ -311,36 +449,97 @@ export default function App() {
           </button>
         </div>
       )}
+      <div className="mobile-tabs" role="tablist" aria-label="Workspace view">
+        <button
+          role="tab"
+          aria-selected={mobileTab === 'vault'}
+          onClick={() => setMobileTab('vault')}
+        >
+          Vault
+        </button>
+        <button
+          role="tab"
+          aria-selected={mobileTab === 'loadout'}
+          onClick={() => setMobileTab('loadout')}
+        >
+          Loadout
+        </button>
+      </div>
+      <div className="sr-only" aria-live="polite" aria-atomic="true">
+        {announcement}
+      </div>
       <main className="workspace">
-        <GearVault
-          items={filteredItems}
-          totalItems={items.length}
-          selectedId={selectedId}
-          query={query}
-          onQueryChange={setQuery}
-          onSelect={setSelectedId}
-          onTogglePacked={togglePacked}
-          onAdd={() => setDialogItem(null)}
-          onEdit={setDialogItem}
-          onDuplicate={duplicateItem}
-          onDelete={deleteItem}
-          packedItemIds={packedItemIds}
-          categoryLabels={categoryLabels}
-          categories={categories}
-          displayWeightUnit={userSettings.displayWeightUnit}
-          filters={filters}
-          onFiltersChange={setFilters}
-          sort={sort}
-          onSortChange={setSort}
-        />
-        <ActiveLoadout
-          itemsById={itemsById}
-          loadout={activeLoadout}
-          capacity={userSettings.carryCapacityGrams}
-          categoryLabels={categoryLabels}
-          displayWeightUnit={userSettings.displayWeightUnit}
-          onRemove={togglePacked}
-        />
+        <div
+          className={`workspace-region workspace-region--vault ${mobileTab !== 'vault' ? 'mobile-hidden' : ''}`}
+        >
+          <GearVault
+            items={filteredItems}
+            totalItems={items.length}
+            selectedId={selectedId}
+            query={query}
+            onQueryChange={setQuery}
+            onSelect={setSelectedId}
+            onAddToLoadout={addToLoadout}
+            registerAddButton={(id, element) => {
+              if (element) addButtonRefs.current.set(id, element)
+              else addButtonRefs.current.delete(id)
+            }}
+            onAdd={() => setDialogItem(null)}
+            onEdit={setDialogItem}
+            onDuplicate={duplicateItem}
+            onDelete={deleteItem}
+            packedItemIds={packedItemIds}
+            categoryLabels={categoryLabels}
+            categories={categories}
+            displayWeightUnit={userSettings.displayWeightUnit}
+            filters={filters}
+            onFiltersChange={setFilters}
+            sort={sort}
+            onSortChange={setSort}
+          />
+        </div>
+        <div
+          className={`workspace-region workspace-region--loadout ${mobileTab !== 'loadout' ? 'mobile-hidden' : ''}`}
+        >
+          <ActiveLoadout
+            itemsById={itemsById}
+            loadouts={loadouts}
+            activeLoadoutId={activeLoadout.id}
+            capacity={userSettings.carryCapacityGrams}
+            categoryLabels={categoryLabels}
+            displayWeightUnit={userSettings.displayWeightUnit}
+            undoLabel={undo?.label}
+            onSwitch={(id) => {
+              setActiveLoadoutId(id)
+              setAnnouncement(
+                `Switched to ${loadouts.find((trip) => trip.id === id)?.name}.`,
+              )
+            }}
+            onCreate={createTrip}
+            onRename={renameTrip}
+            onDuplicate={duplicateTrip}
+            onDelete={deleteTrip}
+            onAddGear={() => {
+              setMobileTab('vault')
+              window.setTimeout(
+                () =>
+                  document
+                    .querySelector<HTMLInputElement>('.search input')
+                    ?.focus(),
+                0,
+              )
+            }}
+            onDropItem={addToLoadout}
+            onUpdateEntry={updateEntry}
+            onRemove={removeEntry}
+            onUndo={() => {
+              if (!undo) return
+              updateInventory(undo.restore)
+              setAnnouncement('Removal undone.')
+              setUndo(null)
+            }}
+          />
+        </div>
         {selected && (
           <ItemInspector
             item={selected}
